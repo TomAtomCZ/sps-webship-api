@@ -17,11 +17,6 @@ class Tracker
     /** @var string */
     protected $language;
 
-    /** @var string */
-    protected $wsdl = 'http://t-t.sps-sro.sk/service_soap.php?wsdl';
-
-    protected \SoapClient $soap;
-
     /**
      * Constructor.
      *
@@ -34,8 +29,6 @@ class Tracker
         $this->language = $language;
         $this->customer = $customer;
         $this->customerType = $customerType;
-
-        $this->soap = new \SoapClient($this->wsdl);
     }
 
     /**
@@ -43,7 +36,7 @@ class Tracker
      *
      * @param string $number
      *
-     * @return \stdClass[]
+     * @return array
      */
     public function getStatusHistory(string $number): array
     {
@@ -51,14 +44,14 @@ class Tracker
             throw new \InvalidArgumentException('Invalid shipment number format!');
         }
 
-        try {
-            $response = $this->soap->__call('getParcelStatus', [
-                ...$shipmentNumber,
-                'langi' => $this->language
-            ]);
-        } catch (\SoapFault $e) {
-            return [];
-        }
+        $payload = [
+            'langi' => $this->language,
+            'landnr' => (int) $shipmentNumber['landnr'],
+            'mandnr' => $shipmentNumber['mandnr'],
+            'lfdnr' => $shipmentNumber['lfdnr']
+        ];
+
+        $response = $this->makeRequest('GetParcelStatus', $payload);
 
         return $response ?? [];
     }
@@ -68,24 +61,22 @@ class Tracker
      *
      * @param string $number
      *
-     * @return \stdClass|null
+     * @return array|null
      */
-    public function getShipment(string $number): ?\stdClass
+    public function getShipment(string $number): ?array
     {
         if (!($shipmentNumber = $this->parseShipmentNumber($number))) {
             throw new \InvalidArgumentException('Invalid shipment number format!');
         }
 
-        try {
-            $response = $this->soap->__call('getShipment', [
-                ...$shipmentNumber,
-                'langi' => $this->language
-            ]);
-        } catch (\SoapFault $e) {
-            return null;
-        }
+        $payload = [
+            'langi' => $this->language,
+            'landnr' => (int) $shipmentNumber['landnr'],
+            'mandnr' => $shipmentNumber['mandnr'],
+            'lfdnr' => $shipmentNumber['lfdnr']
+        ];
 
-        return $response;
+        return $this->makeRequest('GetShipment', $payload);
     }
 
     /**
@@ -94,30 +85,67 @@ class Tracker
      * @param string $reference
      * @param string $date
      *
-     * @return \stdClass[]
+     * @return array
      */
     public function getShipments(string $reference, string $date = ''): array
     {
-        try {
-            $response = $this->soap->__call('getListOfShipments', [
-                'kundenr' => $this->customer,
-                'verknr' => $reference,
-                'km_mandr' => $this->customerType,
-                'versdat' => $date,
-                'langi' => $this->language
-            ]);
-        } catch (\SoapFault $e) {
-            return [];
+        $payload = [
+            'kundenr' => (string) $this->customer,
+            'verknr' => $reference,
+            'km_mandr' => (string) $this->customerType,
+            'versdat' => $date,
+            'langi' => $this->language
+        ];
+
+        $response = $this->makeRequest('GetListOfShipments', $payload);
+
+        return $response ?? [];
+    }
+
+    /**
+     * Make HTTP POST request to REST API.
+     *
+     * @param string $endpoint
+     * @param array  $payload
+     *
+     * @return array|null
+     */
+    protected function makeRequest(string $endpoint, array $payload): ?array
+    {
+        $url = 'https://trackandtraceapi.nesy.sps-sro.sk/api/sk/v1/TrackAndTrace/' . $endpoint . '?apikey=%20ea409786-31bd-4d22-9831-578551e743a6';
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => [
+                    'Content-Type: application/json',
+                    'Accept: text/plain'
+                ],
+                'content' => json_encode($payload),
+                'ignore_errors' => true
+            ]
+        ]);
+
+        $response = file_get_contents($url, false, $context);
+
+        if (!$response) {
+            return null;
         }
 
-        return (array) $response;
+        $decoded = json_decode($response, true);
+
+        if (!$decoded || !isset($decoded['resultCode']) || $decoded['resultCode'] !== 200) {
+            return null;
+        }
+
+        return $decoded['payload'] ?? null;
     }
 
     /**
      * Parse shipment number.
-     * 
+     *
      * @param string $number
-     * 
+     *
      * @return null|array {
      *   landnr: string,
      *   mandnr: string,
@@ -125,7 +153,7 @@ class Tracker
      * }
      */
     protected function parseShipmentNumber(string $number): ?array
-    {  
+    {
         if (\preg_match('/[0-9]+/', $number)) {
             return [
                 'landnr' => '',
