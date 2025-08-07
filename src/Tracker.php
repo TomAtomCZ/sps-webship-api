@@ -18,7 +18,10 @@ class Tracker
     protected $language;
 
     /** @var string */
-    protected $wsdl = 'http://t-t.sps-sro.sk/service_soap.php?wsdl';
+    protected $wsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
+
+    /** @var string */
+    protected $httpsWsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
 
     protected \SoapClient $soap;
 
@@ -26,16 +29,18 @@ class Tracker
      * Constructor.
      *
      * @param string $language
-     * @param int    $customer
-     * @param int    $customerType
+     * @param int $customer
+     * @param int $customerType
+     * @param bool $useHttpsWsdl
+     * @throws \SoapFault
      */
-    public function __construct(string $language, int $customer, int $customerType = 1)
+    public function __construct(string $language, int $customer, int $customerType = 1, bool $useHttpsWsdl = false)
     {
         $this->language = $language;
         $this->customer = $customer;
         $this->customerType = $customerType;
 
-        $this->soap = new \SoapClient($this->wsdl);
+        $this->soap = new \SoapClient(!$useHttpsWsdl ? $this->wsdl : $this->httpsWsdl);
     }
 
     /**
@@ -115,9 +120,9 @@ class Tracker
 
     /**
      * Parse shipment number.
-     * 
+     *
      * @param string $number
-     * 
+     *
      * @return null|array {
      *   landnr: string,
      *   mandnr: string,
@@ -125,7 +130,7 @@ class Tracker
      * }
      */
     protected function parseShipmentNumber(string $number): ?array
-    {  
+    {
         if (\preg_match('/[0-9]+/', $number)) {
             return [
                 'landnr' => '',
