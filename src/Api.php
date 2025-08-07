@@ -8,7 +8,7 @@ namespace Riesenia\SpsWebship;
  */
 class Api
 {
-    /** @var SoapClient */
+    /** @var \SoapClient */
     protected $soap = null;
 
     /** @var string */
@@ -65,6 +65,41 @@ class Api
         }
 
         return true;
+    }
+
+
+    /**
+     * Call createCifShipment method.
+     *
+     * @param array   $shipment
+     * @param integer $shipmentType (0 - print waybills, 1 - pickup order)
+     *
+     * @return bool|\stdClass false if creation failed, stdClass with packageInfo otherwise
+     */
+    public function createCifShipment(array $shipment, int $shipmentType = 0): bool|\stdClass
+    {
+        $response = $this->soap->createCifShipment([
+            'name' => $this->username,
+            'password' => $this->password,
+            'webServiceShipment' => $shipment,
+            'webServiceShipmentType' => $shipmentType
+        ]);
+
+        if (isset($response->createCifShipmentReturn->result->errors) && $response->createCifShipmentReturn->result->errors) {
+            $this->messages = (string) $response->createCifShipmentReturn->result->errors;
+
+            return false;
+        }
+
+        if (isset($response->createCifShipmentReturn->result->warnings)) {
+            $this->messages = (string) $response->createCifShipmentReturn->result->warnings;
+        }
+
+        if (!isset($response->createCifShipmentReturn->packageInfo)) {
+            return false;
+        }
+
+        return $response->createCifShipmentReturn->packageInfo;
     }
 
     /**
