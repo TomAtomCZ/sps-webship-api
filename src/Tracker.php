@@ -3,9 +3,6 @@
 namespace Riesenia\SpsWebship;
 
 use InvalidArgumentException;
-use SoapClient;
-use SoapFault;
-use stdClass;
 
 /**
  * API client for getting shipment status.
@@ -49,7 +46,7 @@ class Tracker
 
         $payload = [
             'langi' => $this->language,
-            'landnr' => (int) $shipmentNumber['landnr'],
+            'landnr' => (int)$shipmentNumber['landnr'],
             'mandnr' => $shipmentNumber['mandnr'],
             'lfdnr' => $shipmentNumber['lfdnr']
         ];
@@ -74,7 +71,7 @@ class Tracker
 
         $payload = [
             'langi' => $this->language,
-            'landnr' => (int) $shipmentNumber['landnr'],
+            'landnr' => (int)$shipmentNumber['landnr'],
             'mandnr' => $shipmentNumber['mandnr'],
             'lfdnr' => $shipmentNumber['lfdnr']
         ];
@@ -93,9 +90,9 @@ class Tracker
     public function getShipments(string $reference, string $date = ''): array
     {
         $payload = [
-            'kundenr' => (string) $this->customer,
+            'kundenr' => (string)$this->customer,
             'verknr' => $reference,
-            'km_mandr' => (string) $this->customerType,
+            'km_mandr' => (string)$this->customerType,
             'versdat' => $date,
             'langi' => $this->language
         ];
@@ -109,7 +106,7 @@ class Tracker
      * Make HTTP POST request to REST API.
      *
      * @param string $endpoint
-     * @param array  $payload
+     * @param array $payload
      *
      * @return array|null
      */
