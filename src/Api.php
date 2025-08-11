@@ -1,5 +1,10 @@
 <?php
+
 namespace Riesenia\SpsWebship;
+
+    use SoapClient;
+use SoapFault;
+use stdClass;
 
 /**
  * API client for sending packages
@@ -8,39 +13,35 @@ namespace Riesenia\SpsWebship;
  */
 class Api
 {
-    /** @var \SoapClient */
-    protected $soap = null;
+    protected ?SoapClient $soap = null;
 
-    /** @var string */
-    protected $username;
+    protected string $username;
 
-    /** @var string */
-    protected $password;
+    protected string $password;
 
-    /** @var string */
-    protected $wsdl = 'https://webship.sps-sro.sk/services/WebshipWebService?wsdl';
+    protected string $wsdl = 'https://webship.sps-sro.sk/services/WebshipWebService?wsdl';
 
-    /** @var string */
-    protected $messages = '';
+    protected string $messages = '';
 
     /**
      * Constructor.
      *
      * @param string $username
      * @param string $password
+     * @throws SoapFault
      */
     public function __construct(string $username, string $password)
     {
         $this->username = $username;
         $this->password = $password;
 
-        $this->soap = new \SoapClient($this->wsdl);
+        $this->soap = new SoapClient($this->wsdl);
     }
 
     /**
      * Call createShipment method.
      *
-     * @param array   $shipment
+     * @param array $shipment
      * @param integer $shipmentType (0 - print waybills, 1 - pickup order)
      *
      * @return bool
@@ -55,13 +56,13 @@ class Api
         ]);
 
         if (isset($response->createShipmentReturn->errors) && $response->createShipmentReturn->errors) {
-            $this->messages = (string) $response->createShipmentReturn->errors;
+            $this->messages = (string)$response->createShipmentReturn->errors;
 
             return false;
         }
 
         if (isset($response->createShipmentReturn->warnings)) {
-            $this->messages = (string) $response->createShipmentReturn->warnings;
+            $this->messages = (string)$response->createShipmentReturn->warnings;
         }
 
         return true;
@@ -71,12 +72,12 @@ class Api
     /**
      * Call createCifShipment method.
      *
-     * @param array   $shipment
+     * @param array $shipment
      * @param integer $shipmentType (0 - print waybills, 1 - pickup order)
      *
-     * @return bool|\stdClass false if creation failed, stdClass with packageInfo otherwise
+     * @return bool|stdClass false if creation failed, stdClass with packageInfo otherwise
      */
-    public function createCifShipment(array $shipment, int $shipmentType = 0): bool|\stdClass
+    public function createCifShipment(array $shipment, int $shipmentType = 0): bool|stdClass
     {
         $response = $this->soap->createCifShipment([
             'name' => $this->username,
@@ -86,13 +87,13 @@ class Api
         ]);
 
         if (isset($response->createCifShipmentReturn->result->errors) && $response->createCifShipmentReturn->result->errors) {
-            $this->messages = (string) $response->createCifShipmentReturn->result->errors;
+            $this->messages = (string)$response->createCifShipmentReturn->result->errors;
 
             return false;
         }
 
         if (isset($response->createCifShipmentReturn->result->warnings)) {
-            $this->messages = (string) $response->createCifShipmentReturn->result->warnings;
+            $this->messages = (string)$response->createCifShipmentReturn->result->warnings;
         }
 
         if (!isset($response->createCifShipmentReturn->packageInfo)) {
@@ -129,7 +130,7 @@ class Api
         }
 
         if (isset($response->{$returnKey}->errors) && $response->{$returnKey}->errors) {
-            $this->messages = (string) $response->{$returnKey}->errors;
+            $this->messages = (string)$response->{$returnKey}->errors;
 
             return '';
         }
@@ -150,7 +151,7 @@ class Api
         ]);
 
         if (isset($response->printEndOfDayReturn->errors) && $response->printEndOfDayReturn->errors) {
-            $this->messages = (string) $response->printEndOfDayReturn->errors;
+            $this->messages = (string)$response->printEndOfDayReturn->errors;
 
             return '';
         }

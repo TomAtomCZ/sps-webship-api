@@ -1,5 +1,11 @@
 <?php
+
 namespace Riesenia\SpsWebship;
+
+use InvalidArgumentException;
+use SoapClient;
+use SoapFault;
+use stdClass;
 
 /**
  * API client for getting shipment status.
@@ -8,22 +14,17 @@ namespace Riesenia\SpsWebship;
  */
 class Tracker
 {
-    /** @var int */
-    protected $customer;
+    protected int $customer;
 
-    /** @var int */
-    protected $customerType;
+    protected int $customerType;
 
-    /** @var string */
-    protected $language;
+    protected string $language;
 
-    /** @var string */
-    protected $wsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
+    protected string $wsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
 
-    /** @var string */
-    protected $httpsWsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
+    protected string $httpsWsdl = 'https://t-t.sps-sro.sk/service_soap.php?wsdl';
 
-    protected \SoapClient $soap;
+    protected SoapClient $soap;
 
     /**
      * Constructor.
@@ -32,7 +33,7 @@ class Tracker
      * @param int $customer
      * @param int $customerType
      * @param bool $useHttpsWsdl
-     * @throws \SoapFault
+     * @throws SoapFault
      */
     public function __construct(string $language, int $customer, int $customerType = 1, bool $useHttpsWsdl = false)
     {
@@ -40,7 +41,7 @@ class Tracker
         $this->customer = $customer;
         $this->customerType = $customerType;
 
-        $this->soap = new \SoapClient(!$useHttpsWsdl ? $this->wsdl : $this->httpsWsdl);
+        $this->soap = new SoapClient(!$useHttpsWsdl ? $this->wsdl : $this->httpsWsdl);
     }
 
     /**
@@ -48,20 +49,20 @@ class Tracker
      *
      * @param string $number
      *
-     * @return \stdClass[]
+     * @return stdClass[]
      */
     public function getStatusHistory(string $number): array
     {
         if (!($shipmentNumber = $this->parseShipmentNumber($number))) {
-            throw new \InvalidArgumentException('Invalid shipment number format!');
+            throw new InvalidArgumentException('Invalid shipment number format!');
         }
 
         try {
-            $response = $this->soap->__call('getParcelStatus', [
+            $response = $this->soap->__soapCall('getParcelStatus', [
                 ...$shipmentNumber,
                 'langi' => $this->language
             ]);
-        } catch (\SoapFault $e) {
+        } catch (SoapFault) {
             return [];
         }
 
@@ -73,20 +74,20 @@ class Tracker
      *
      * @param string $number
      *
-     * @return \stdClass|null
+     * @return stdClass|null
      */
-    public function getShipment(string $number): ?\stdClass
+    public function getShipment(string $number): ?stdClass
     {
         if (!($shipmentNumber = $this->parseShipmentNumber($number))) {
-            throw new \InvalidArgumentException('Invalid shipment number format!');
+            throw new InvalidArgumentException('Invalid shipment number format!');
         }
 
         try {
-            $response = $this->soap->__call('getShipment', [
+            $response = $this->soap->__soapCall('getShipment', [
                 ...$shipmentNumber,
                 'langi' => $this->language
             ]);
-        } catch (\SoapFault $e) {
+        } catch (SoapFault) {
             return null;
         }
 
@@ -99,23 +100,23 @@ class Tracker
      * @param string $reference
      * @param string $date
      *
-     * @return \stdClass[]
+     * @return stdClass[]
      */
     public function getShipments(string $reference, string $date = ''): array
     {
         try {
-            $response = $this->soap->__call('getListOfShipments', [
+            $response = $this->soap->__soapCall('getListOfShipments', [
                 'kundenr' => $this->customer,
                 'verknr' => $reference,
                 'km_mandr' => $this->customerType,
                 'versdat' => $date,
                 'langi' => $this->language
             ]);
-        } catch (\SoapFault $e) {
+        } catch (SoapFault) {
             return [];
         }
 
-        return (array) $response;
+        return (array)$response;
     }
 
     /**
@@ -131,7 +132,7 @@ class Tracker
      */
     protected function parseShipmentNumber(string $number): ?array
     {
-        if (\preg_match('/[0-9]+/', $number)) {
+        if (preg_match('/[0-9]+/', $number)) {
             return [
                 'landnr' => '',
                 'mandnr' => '',
@@ -139,7 +140,7 @@ class Tracker
             ];
         }
 
-        if (\preg_match('/([0-9]{3})-([0-9]{3})-([0-9]+)/', $number, $m)) {
+        if (preg_match('/([0-9]{3})-([0-9]{3})-([0-9]+)/', $number, $m)) {
             return [
                 'landnr' => $m[1],
                 'mandnr' => $m[2],
